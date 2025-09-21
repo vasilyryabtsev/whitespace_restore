@@ -48,8 +48,7 @@ class ByT5WhitespaceRestorer(nn.Module):
     def forward(
         self,
         input_ids: torch.Tensor,
-        attention_mask: torch.Tensor,
-        labels: Optional[torch.Tensor] = None,
+        attention_mask: torch.Tensor
     ) -> torch.Tensor:
         """
         Прямой проход модели.

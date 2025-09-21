@@ -6,19 +6,7 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 
 def focal_loss(logits, labels, alpha=1.0, gamma=2.0, ignore_index=-100):
-    """
-    Focal Loss для работы с несбалансированными классами.
-
-    Args:
-        logits: Предсказания модели [batch_size * seq_len, num_classes]
-        labels: Истинные метки [batch_size * seq_len]
-        alpha: Вес для балансировки классов
-        gamma: Фокусирующий параметр
-        ignore_index: Индекс для игнорирования
-
-    Returns:
-        torch.Tensor: Focal loss
-    """
+    """Вычисляет Focal Loss для несбалансированных классов."""
     ce_loss = F.cross_entropy(
         logits, labels, reduction="none", ignore_index=ignore_index
     )
@@ -31,17 +19,7 @@ def focal_loss(logits, labels, alpha=1.0, gamma=2.0, ignore_index=-100):
 
 
 def calculate_metrics(logits, labels, ignore_index=-100):
-    """
-    Вычисляет accuracy, precision, recall, F1 для валидных токенов.
-
-    Args:
-        logits: Предсказания модели [batch_size * seq_len, 2]
-        labels: Истинные метки [batch_size * seq_len]
-        ignore_index: Индекс для игнорирования при вычислении метрик
-
-    Returns:
-        dict: Словарь с метриками
-    """
+    """Вычисляет accuracy, precision, recall и F1 для валидных токенов."""
     # Фильтруем ignore_index
     mask = labels != ignore_index
 
@@ -58,18 +36,7 @@ def calculate_metrics(logits, labels, ignore_index=-100):
 
 
 def save_checkpoint(model, optimizer, scheduler, epoch, loss, metrics, filepath):
-    """
-    Сохраняет полный чекпоинт модели с состоянием оптимизатора и scheduler.
-
-    Args:
-        model: Модель для сохранения
-        optimizer: Оптимизатор
-        scheduler: Learning rate scheduler (может быть None)
-        epoch: Номер эпохи
-        loss: Значение loss
-        metrics: Словарь с метриками
-        filepath: Путь для сохранения чекпоинта
-    """
+    """Сохраняет чекпоинт модели с состоянием оптимизатора и метриками."""
     checkpoint = {
         "epoch": epoch,
         "model_state_dict": model.state_dict(),
@@ -87,20 +54,9 @@ def save_checkpoint(model, optimizer, scheduler, epoch, loss, metrics, filepath)
     print(f"Checkpoint saved to {filepath}")
 
 
-def load_checkpoint(filepath, model, optimizer=None, scheduler=None):
-    """
-    Загружает чекпоинт модели.
-
-    Args:
-        filepath: Путь к файлу чекпоинта
-        model: Модель для загрузки весов
-        optimizer: Оптимизатор для загрузки состояния (опционально)
-        scheduler: Scheduler для загрузки состояния (опционально)
-
-    Returns:
-        dict: Информация о загруженном чекпоинте
-    """
-    checkpoint = torch.load(filepath, map_location="cpu")
+def load_checkpoint(filepath, model, optimizer=None, scheduler=None, device="cpu"):
+    """Загружает чекпоинт модели и восстанавливает состояние."""
+    checkpoint = torch.load(filepath, map_location=device)
 
     model.load_state_dict(checkpoint["model_state_dict"])
 
@@ -111,8 +67,3 @@ def load_checkpoint(filepath, model, optimizer=None, scheduler=None):
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
 
     print(f"Checkpoint loaded from {filepath}")
-    return {
-        "epoch": checkpoint.get("epoch", 0),
-        "loss": checkpoint.get("loss", float("inf")),
-        "metrics": checkpoint.get("metrics", {}),
-    }

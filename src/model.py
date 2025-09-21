@@ -6,29 +6,16 @@ from typing import Optional
 
 
 class ByT5WhitespaceRestorer(nn.Module):
-    """
-    ByT5 модель для восстановления пробелов в тексте.
-
-    Использует предобученный ByT5-small энкодер и добавляет голову классификации
-    для предсказания места вставки пробелов (0 - не добавлять, 1 - добавить пробел).
-    """
+    """Модель для восстановления пробелов на основе ByT5."""
 
     def __init__(self, dropout_rate: float = 0.1, freeze_encoder: bool = False):
-        """
-        Инициализация модели.
-
-        Args:
-            dropout_rate: Коэффициент dropout для классификационной головы
-            freeze_encoder: Заморозить ли веса энкодера
-        """
+        """Инициализирует модель с ByT5 энкодером и классификационной головой."""
         super().__init__()
 
         # Загрузка предобученного ByT5
         model_name = "google/byt5-small"
         full_model = T5ForConditionalGeneration.from_pretrained(
-            model_name,
-            use_safetensors=True,
-            torch_dtype=torch.float32
+            model_name, use_safetensors=True, torch_dtype=torch.float32
         )
         self.encoder = full_model.encoder
 
@@ -51,21 +38,9 @@ class ByT5WhitespaceRestorer(nn.Module):
         )
 
     def forward(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor
+        self, input_ids: torch.Tensor, attention_mask: torch.Tensor
     ) -> torch.Tensor:
-        """
-        Прямой проход модели.
-
-        Args:
-            input_ids: Токенизированный входной текст [batch_size, seq_len]
-            attention_mask: Маска внимания [batch_size, seq_len]
-            labels: Целевые метки для обучения [batch_size, seq_len]
-
-        Returns:
-            logits: Логиты предсказаний
-        """
+        """Выполняет прямой проход модели и возвращает логиты."""
         # Получение скрытых представлений от энкодера
         encoder_outputs = self.encoder(
             input_ids=input_ids, attention_mask=attention_mask

@@ -5,11 +5,7 @@ from transformers import AutoTokenizer
 
 
 class WhitespaceDataset(Dataset):
-    """
-    Датасет для задачи восстановления пробелов (двухклассовая постановка: K=0, I=1).
-    Используется байтовый токенизатор ByT5.
-    Вход: строка без пробелов, таргет: строка с правильными пробелами.
-    """
+    """Датасет для задачи восстановления пробелов с ByT5 токенизатором."""
 
     def __init__(self, filepath, max_length=128, ignore_index=-100):
         self.samples = []
@@ -59,7 +55,7 @@ class WhitespaceDataset(Dataset):
         }
 
     def _get_special_token_ids(self):
-        """Возвращает множество ID всех специальных токенов ByT5"""
+        """Возвращает множество ID специальных токенов ByT5."""
         special_ids = {0, 1, 2}  # PAD, EOS, UNK
 
         # Добавляем все токены из tokenizer
@@ -120,11 +116,7 @@ class WhitespaceDataset(Dataset):
 
     @staticmethod
     def _make_labels(input_text, target_text):
-        """
-        Строит список меток длиной = числу символов input_text:
-        1 (I) - после символа нужно вставить пробел
-        0 (K) - пробел не нужен
-        """
+        """Создает метки для восстановления пробелов (0 - не нужен, 1 - нужен)."""
         labels = []
         target_pos = 0
 

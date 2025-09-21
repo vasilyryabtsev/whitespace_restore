@@ -1,6 +1,5 @@
 import os
 import torch
-import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 from datetime import datetime

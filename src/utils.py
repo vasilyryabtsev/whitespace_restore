@@ -1,5 +1,6 @@
 import torch
 
+
 def focal_loss(logits, labels, alpha=1.0, gamma=2.0, ignore_index=-100):
     """
     Focal Loss для работы с несбалансированными классами.
@@ -85,29 +86,29 @@ def save_checkpoint(model, optimizer, scheduler, epoch, loss, metrics, filepath)
 def load_checkpoint(filepath, model, optimizer=None, scheduler=None):
     """
     Загружает чекпоинт модели.
-    
+
     Args:
         filepath: Путь к файлу чекпоинта
         model: Модель для загрузки весов
         optimizer: Оптимизатор для загрузки состояния (опционально)
         scheduler: Scheduler для загрузки состояния (опционально)
-        
+
     Returns:
         dict: Информация о загруженном чекпоинте
     """
-    checkpoint = torch.load(filepath, map_location='cpu')
-    
-    model.load_state_dict(checkpoint['model_state_dict'])
-    
-    if optimizer is not None and 'optimizer_state_dict' in checkpoint:
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        
-    if scheduler is not None and 'scheduler_state_dict' in checkpoint:
-        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-        
+    checkpoint = torch.load(filepath, map_location="cpu")
+
+    model.load_state_dict(checkpoint["model_state_dict"])
+
+    if optimizer is not None and "optimizer_state_dict" in checkpoint:
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+
+    if scheduler is not None and "scheduler_state_dict" in checkpoint:
+        scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+
     print(f"Checkpoint loaded from {filepath}")
     return {
-        'epoch': checkpoint.get('epoch', 0),
-        'loss': checkpoint.get('loss', float('inf')),
-        'metrics': checkpoint.get('metrics', {})
+        "epoch": checkpoint.get("epoch", 0),
+        "loss": checkpoint.get("loss", float("inf")),
+        "metrics": checkpoint.get("metrics", {}),
     }

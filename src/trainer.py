@@ -4,58 +4,7 @@ import torch.nn.functional as F
 
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-
-
-def focal_loss(logits, labels, alpha=1.0, gamma=2.0, ignore_index=-100):
-    """
-    Focal Loss для работы с несбалансированными классами.
-
-    Args:
-        logits: Предсказания модели [batch_size * seq_len, num_classes]
-        labels: Истинные метки [batch_size * seq_len]
-        alpha: Вес для балансировки классов
-        gamma: Фокусирующий параметр
-        ignore_index: Индекс для игнорирования
-
-    Returns:
-        torch.Tensor: Focal loss
-    """
-    ce_loss = F.cross_entropy(
-        logits, labels, reduction="none", ignore_index=ignore_index
-    )
-    pt = torch.exp(-ce_loss)
-    focal_loss = alpha * (1 - pt) ** gamma * ce_loss
-
-    # Игнорируем значения с ignore_index
-    mask = labels != ignore_index
-    return focal_loss[mask].mean()
-
-
-def calculate_metrics(logits, labels, ignore_index=-100):
-    """
-    Вычисляет accuracy, precision, recall, F1 для валидных токенов.
-
-    Args:
-        logits: Предсказания модели [batch_size * seq_len, 2]
-        labels: Истинные метки [batch_size * seq_len]
-        ignore_index: Индекс для игнорирования при вычислении метрик
-
-    Returns:
-        dict: Словарь с метриками
-    """
-    # Фильтруем ignore_index
-    mask = labels != ignore_index
-
-    preds = torch.argmax(logits, dim=-1)
-    valid_preds = preds[mask].cpu().numpy()
-    valid_labels = labels[mask].cpu().numpy()
-
-    acc = accuracy_score(valid_labels, valid_preds)
-    prec, rec, f1, _ = precision_recall_fscore_support(
-        valid_labels, valid_preds, average="binary", zero_division=0
-    )
-
-    return {"accuracy": acc, "precision": prec, "recall": rec, "f1": f1}
+from utils import save_checkpoint, calculate_metrics, focal_loss
 
 
 def train_epoch(
@@ -121,36 +70,6 @@ def train_epoch(
     print(f"Train - Loss: {avg_loss:.4f}, F1: {metrics.get('f1', 0):.4f}")
 
     return avg_loss, metrics
-
-
-def save_checkpoint(model, optimizer, scheduler, epoch, loss, metrics, filepath):
-    """
-    Сохраняет полный чекпоинт модели с состоянием оптимизатора и scheduler.
-
-    Args:
-        model: Модель для сохранения
-        optimizer: Оптимизатор
-        scheduler: Learning rate scheduler (может быть None)
-        epoch: Номер эпохи
-        loss: Значение loss
-        metrics: Словарь с метриками
-        filepath: Путь для сохранения чекпоинта
-    """
-    checkpoint = {
-        "epoch": epoch,
-        "model_state_dict": model.state_dict(),
-        "optimizer_state_dict": optimizer.state_dict(),
-        "loss": loss,
-        "metrics": metrics,
-    }
-
-    if scheduler is not None:
-        checkpoint["scheduler_state_dict"] = scheduler.state_dict()
-
-    # Создаем директорию если не существует
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    torch.save(checkpoint, filepath)
-    print(f"Checkpoint saved to {filepath}")
 
 
 def validate_epoch(model, dataloader, device="cuda"):

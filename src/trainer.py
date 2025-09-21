@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from datetime import datetime
 from .utils import save_checkpoint, calculate_metrics, focal_loss
+from torch.cuda.amp import autocast, GradScaler
+
+scaler = GradScaler()
 
 
 def train_epoch(
@@ -22,15 +25,16 @@ def train_epoch(
 
         optimizer.zero_grad()
 
-        # Получаем логиты от модели
-        logits = model(input_ids=input_ids, attention_mask=attention_mask)
+        with autocast():
+            # Получаем логиты от модели
+            logits = model(input_ids=input_ids, attention_mask=attention_mask)
 
-        # Вычисляем focal loss с gamma=2
-        loss = focal_loss(
-            logits.view(-1, 2),  # [batch_size * seq_len, 2]
-            labels.view(-1),  # [batch_size * seq_len]
-            gamma=2.0,
-        )
+            # Вычисляем focal loss с gamma=2
+            loss = focal_loss(
+                logits.view(-1, 2),  # [batch_size * seq_len, 2]
+                labels.view(-1),  # [batch_size * seq_len]
+                gamma=2.0,
+            )
 
         loss.backward()
 
@@ -69,15 +73,16 @@ def validate_epoch(model, dataloader, device="cuda"):
             attention_mask = batch["attention_mask"].to(device)
             labels = batch["labels"].to(device)
 
-            # Получаем логиты от модели
-            logits = model(input_ids=input_ids, attention_mask=attention_mask)
+            with autocast():
+                # Получаем логиты от модели
+                logits = model(input_ids=input_ids, attention_mask=attention_mask)
 
-            # Вычисляем loss с учетом ignore_index=-100
-            loss = focal_loss(
-                logits.view(-1, 2),  # [batch_size * seq_len, 2]
-                labels.view(-1),  # [batch_size * seq_len]
-                gamma=2.0,
-            )
+                # Вычисляем loss с учетом ignore_index=-100
+                loss = focal_loss(
+                    logits.view(-1, 2),  # [batch_size * seq_len, 2]
+                    labels.view(-1),  # [batch_size * seq_len]
+                    gamma=2.0,
+                )
 
             total_loss += loss.item()
 

@@ -25,7 +25,12 @@ class ByT5WhitespaceRestorer(nn.Module):
 
         # Загрузка предобученного ByT5
         model_name = "google/byt5-small"
-        self.encoder = T5EncoderModel.from_pretrained(model_name)
+        full_model = T5ForConditionalGeneration.from_pretrained(
+            model_name,
+            use_safetensors=True,
+            torch_dtype=torch.float32
+        )
+        self.encoder = full_model.encoder
 
         # Заморозка весов энкодера если нужно
         if freeze_encoder:

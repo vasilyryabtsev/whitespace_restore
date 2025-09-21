@@ -3,7 +3,7 @@ import torch
 import matplotlib.pyplot as plt
 
 from tqdm import tqdm
-from src.utils import save_checkpoint, calculate_metrics, focal_loss
+from .utils import save_checkpoint, calculate_metrics, focal_loss
 
 
 def train_epoch(

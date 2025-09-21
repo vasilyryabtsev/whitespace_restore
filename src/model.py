@@ -59,7 +59,7 @@ class ByT5WhitespaceRestorer(nn.Module):
             labels: Целевые метки для обучения [batch_size, seq_len]
 
         Returns:
-            Tuple[logits, loss]: Логиты предсказаний и лосс (если переданы labels)
+            logits: Логиты предсказаний
         """
         # Получение скрытых представлений от энкодера
         encoder_outputs = self.encoder(

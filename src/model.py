@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from transformers import T5EncoderModel, AutoTokenizer
+from transformers import T5ForConditionalGeneration
 from typing import Optional
 
 

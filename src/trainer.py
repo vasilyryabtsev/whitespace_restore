@@ -1,10 +1,9 @@
 import os
 import torch
-import torch.nn.functional as F
+import matplotlib.pyplot as plt
 
 from tqdm import tqdm
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-from utils import save_checkpoint, calculate_metrics, focal_loss
+from src.utils import save_checkpoint, calculate_metrics, focal_loss
 
 
 def train_epoch(
@@ -26,8 +25,7 @@ def train_epoch(
     """
     model.train()
     total_loss = 0
-    all_logits = []
-    all_labels = []
+    batch_metrics = []
 
     for batch in tqdm(dataloader, desc="Train"):
         input_ids = batch["input_ids"].to(device)
@@ -57,17 +55,16 @@ def train_epoch(
 
         total_loss += loss.item()
 
-        # Собираем предсказания для метрик
-        all_logits.append(logits.detach().cpu())
-        all_labels.append(labels.detach().cpu())
+        # Вычисляем метрики для текущего батча
+        batch_metrics_dict = calculate_metrics(logits.view(-1, 2), labels.view(-1))
+        batch_metrics.append(batch_metrics_dict)
 
-    # Вычисляем метрики
-    all_logits = torch.cat(all_logits, dim=0)
-    all_labels = torch.cat(all_labels, dim=0)
-    metrics = calculate_metrics(all_logits.view(-1, 2), all_labels.view(-1))
+    # Вычисляем средние метрики по всем батчам
+    metrics = {}
+    for key in batch_metrics[0].keys():
+        metrics[key] = sum(batch[key] for batch in batch_metrics) / len(batch_metrics)
 
     avg_loss = total_loss / len(dataloader)
-    print(f"Train - Loss: {avg_loss:.4f}, F1: {metrics.get('f1', 0):.4f}")
 
     return avg_loss, metrics
 
@@ -87,8 +84,7 @@ def validate_epoch(model, dataloader, device="cuda"):
     """
     model.eval()
     total_loss = 0
-    all_logits = []
-    all_labels = []
+    batch_metrics = []
 
     with torch.no_grad():
         for batch in tqdm(dataloader, desc="Val"):
@@ -108,17 +104,16 @@ def validate_epoch(model, dataloader, device="cuda"):
 
             total_loss += loss.item()
 
-            # Собираем предсказания для метрик
-            all_logits.append(logits.cpu())
-            all_labels.append(labels.cpu())
+            # Вычисляем метрики для текущего батча
+            batch_metrics_dict = calculate_metrics(logits.view(-1, 2), labels.view(-1))
+            batch_metrics.append(batch_metrics_dict)
 
-    # Вычисляем метрики
-    all_logits = torch.cat(all_logits, dim=0)
-    all_labels = torch.cat(all_labels, dim=0)
-    metrics = calculate_metrics(all_logits.view(-1, 2), all_labels.view(-1))
+    # Вычисляем средние метрики по всем батчам
+    metrics = {}
+    for key in batch_metrics[0].keys():
+        metrics[key] = sum(batch[key] for batch in batch_metrics) / len(batch_metrics)
 
     avg_loss = total_loss / len(dataloader)
-    print(f"Val - Loss: {avg_loss:.4f}, F1: {metrics.get('f1', 0):.4f}")
 
     return avg_loss, metrics
 
@@ -152,8 +147,6 @@ def train_and_validate(
     # Создаем директорию для чекпоинтов
     os.makedirs(save_dir, exist_ok=True)
 
-    history = {"train_loss": [], "val_loss": [], "train_metrics": [], "val_metrics": []}
-
     print(f"Starting training for {epochs} epochs")
 
     for epoch in range(epochs):
@@ -163,20 +156,12 @@ def train_and_validate(
         train_loss, train_metrics = train_epoch(
             model, train_loader, optimizer, scheduler, device
         )
-
+        print(f"Train - Loss: {train_loss:.4f}, F1: {train_metrics.get('f1', 0):.4f}")
+        
         # Валидация
         val_loss, val_metrics = validate_epoch(model, val_loader, device)
-
-        # Сохраняем историю
-        history["train_loss"].append(train_loss)
-        history["val_loss"].append(val_loss)
-        history["train_metrics"].append(train_metrics)
-        history["val_metrics"].append(val_metrics)
-
-        # Логирование результатов
-        print(f'Train - Loss: {train_loss:.4f}, F1: {train_metrics.get("f1", 0):.4f}')
-        print(f'Val - Loss: {val_loss:.4f}, F1: {val_metrics.get("f1", 0):.4f}')
-
+        print(f"Val   - Loss: {val_loss:.4f}, F1: {val_metrics.get('f1', 0):.4f}")
+        
         # Сохраняем последний чекпоинт
         last_checkpoint_path = os.path.join(save_dir, "last_checkpoint.pt")
         save_checkpoint(
@@ -188,5 +173,3 @@ def train_and_validate(
             val_metrics,
             last_checkpoint_path,
         )
-
-    return history

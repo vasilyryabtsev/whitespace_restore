@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
 import os
 
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
@@ -54,19 +55,42 @@ def save_checkpoint(model, optimizer, scheduler, epoch, loss, metrics, filepath)
     print(f"Checkpoint saved to {filepath}")
 
 
+def _make_numpy_safe_globals():
+    g = []
+    # allowlist the scalar used in many checkpoints
+    try:
+        g.append((np.core.multiarray.scalar, "numpy.core.multiarray.scalar"))
+    except Exception:
+        pass
+    # allowlist dtype classes that sometimes appear
+    try:
+        g.append((np.dtype, "numpy.dtype"))
+    except Exception:
+        pass
+    try:
+        if hasattr(np, "dtypes") and hasattr(np.dtypes, "Float64DType"):
+            g.append((np.dtypes.Float64DType, "numpy.dtypes.Float64DType"))
+    except Exception:
+        pass
+    return g
+
+
 def load_checkpoint(filepath, model, optimizer=None, scheduler=None, device="cpu"):
-    """Загружает чекпоинт модели и восстанавливает состояние."""
-    torch.serialization.add_safe_globals([np.core.multiarray.scalar])
-    
+    """Загружает чекпоинт модели и восстанавливает состояние (weights_only=True)."""
+    safe_list = _make_numpy_safe_globals()
+    if safe_list:
+        # add to global allowlist (persisting for this process)
+        torch.serialization.add_safe_globals(safe_list)
+
+    # Alternatively, to confine the allowlist to only this load call:
+    # with torch.serialization.safe_globals(safe_list):
+    #     checkpoint = torch.load(filepath, map_location=device, weights_only=True)
     checkpoint = torch.load(filepath, map_location=device, weights_only=True)
 
     print("Loading state dict...")
     model.load_state_dict(checkpoint["model_state_dict"])
-
     if optimizer is not None and "optimizer_state_dict" in checkpoint:
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-
     if scheduler is not None and "scheduler_state_dict" in checkpoint:
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
-
     print(f"Checkpoint loaded from {filepath}")

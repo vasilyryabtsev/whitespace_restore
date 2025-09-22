@@ -35,10 +35,20 @@ def train_epoch(
                 gamma=2.0,
             )
 
+            # Проверяем на NaN
+            if torch.isnan(loss) or torch.isnan(logits).any():
+                print(f"NaN detected in loss or logits, skipping batch")
+                continue
+
         loss.backward()
 
         # Gradient clipping для стабильности обучения
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm)
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm)
+        
+        # Проверяем градиенты на NaN
+        if torch.isnan(torch.tensor(grad_norm)):
+            print(f"NaN in gradients, skipping optimizer step")
+            continue
 
         optimizer.step()
         if scheduler is not None:

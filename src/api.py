@@ -45,7 +45,7 @@ def restore_whitespace_batch(
             )  # [batch_size, seq_len, 2]
             # Получаем вероятности применив softmax
             probabilities = torch.softmax(logits, dim=-1)  # [batch_size, seq_len, 2]
-            print(probabilities)
+            
             # Используем порог вероятности для класса 1 (пробел)
             space_probs = probabilities[
                 :, :, 1

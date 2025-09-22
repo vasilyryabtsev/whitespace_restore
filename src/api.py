@@ -124,8 +124,9 @@ def restore_text_from_predictions(
 
         # Если предсказание говорит добавить пробел после этого символа
         if i < len(char_predictions) and char_predictions[i] == 1:
-            restored_text += " "
-            space_indices.append(i)
+            if i + 1 < len(char_predictions):
+                restored_text += " "
+                space_indices.append(i + 1)  # + 1 чтобы это был пробел перед следующим символом
 
     return restored_text, space_indices
 

@@ -27,7 +27,7 @@ def main():
     load_dotenv()
 
     weights_url = os.getenv("WEIGHTS_URL", "https://drive.google.com/uc?export=download&id=1iywF9EK5jUf4dyl62RINw6HrUSOgR-R1")
-    weights_filename = os.getenv("WEIGHTS_FILENAME", "checkpoint_20250922_095517.pt")
+    weights_filename = os.getenv("WEIGHTS_FILENAME", "checkpoint_20250922_195616.pt")
     path_to_data = os.getenv("PATH_TO_DATA")
     assert path_to_data is not None, "PATH_TO_DATA must be set in .env"
     path_to_save = os.getenv("PATH_TO_SAVE")

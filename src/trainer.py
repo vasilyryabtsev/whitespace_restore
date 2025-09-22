@@ -4,13 +4,10 @@ import torch
 from tqdm import tqdm
 from datetime import datetime
 from .utils import save_checkpoint, calculate_metrics, focal_loss
-from torch.cuda.amp import autocast, GradScaler
-
-scaler = GradScaler()
 
 
 def train_epoch(
-    model, dataloader, optimizer, scheduler=None, device="cuda", max_grad_norm=1.0
+    model, dataloader, optimizer, scheduler=None, device="cuda", max_grad_norm=1
 ):
     """Обучает модель на одной эпохе и возвращает loss с метриками."""
     model.train()
@@ -23,22 +20,21 @@ def train_epoch(
         labels = batch["labels"].to(device)
 
         optimizer.zero_grad()
+    
+        # Получаем логиты от модели
+        logits = model(input_ids=input_ids, attention_mask=attention_mask)
 
-        with autocast():
-            # Получаем логиты от модели
-            logits = model(input_ids=input_ids, attention_mask=attention_mask)
+        # Вычисляем focal loss с gamma=2
+        loss = focal_loss(
+            logits.view(-1, 2),  # [batch_size * seq_len, 2]
+            labels.view(-1),  # [batch_size * seq_len]
+            gamma=2,
+        )
 
-            # Вычисляем focal loss с gamma=2
-            loss = focal_loss(
-                logits.view(-1, 2),  # [batch_size * seq_len, 2]
-                labels.view(-1),  # [batch_size * seq_len]
-                gamma=2.0,
-            )
-
-            # Проверяем на NaN
-            if torch.isnan(loss) or torch.isnan(logits).any():
-                print(f"NaN detected in loss or logits, skipping batch")
-                continue
+        # Проверяем на NaN
+        if torch.isnan(loss) or torch.isnan(logits).any():
+            print(f"NaN detected in loss or logits, skipping batch")
+            continue
 
         loss.backward()
 
@@ -82,16 +78,16 @@ def validate_epoch(model, dataloader, device="cuda"):
             attention_mask = batch["attention_mask"].to(device)
             labels = batch["labels"].to(device)
 
-            with autocast():
-                # Получаем логиты от модели
-                logits = model(input_ids=input_ids, attention_mask=attention_mask)
+        
+            # Получаем логиты от модели
+            logits = model(input_ids=input_ids, attention_mask=attention_mask)
 
-                # Вычисляем loss с учетом ignore_index=-100
-                loss = focal_loss(
-                    logits.view(-1, 2),  # [batch_size * seq_len, 2]
-                    labels.view(-1),  # [batch_size * seq_len]
-                    gamma=2.0,
-                )
+            # Вычисляем loss с учетом ignore_index=-100
+            loss = focal_loss(
+                logits.view(-1, 2),  # [batch_size * seq_len, 2]
+                labels.view(-1),  # [batch_size * seq_len]
+                gamma=2.0,
+            )
 
             total_loss += loss.item()
 

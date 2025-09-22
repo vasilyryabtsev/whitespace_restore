@@ -56,7 +56,9 @@ def save_checkpoint(model, optimizer, scheduler, epoch, loss, metrics, filepath)
 
 def load_checkpoint(filepath, model, optimizer=None, scheduler=None, device="cpu"):
     """Загружает чекпоинт модели и восстанавливает состояние."""
-    checkpoint = torch.load(filepath, map_location=device, weights_only=False)
+    torch.serialization.add_safe_globals([np.core.multiarray.scalar])
+    
+    checkpoint = torch.load(filepath, map_location=device, weights_only=True)
 
     print("Loading state dict...")
     model.load_state_dict(checkpoint["model_state_dict"])

@@ -36,7 +36,7 @@ def main():
     assert device is not None, "DEVICE must be set in .env (e.g., 'cpu' or 'cuda')"
     batch_size = int(os.getenv("BATCH_SIZE", 16))
     num_workers = int(os.getenv("NUM_WORKERS", 1))
-    threshold = float(os.getenv("THRESHOLD", 0.5))
+    threshold = float(os.getenv("THRESHOLD", 0.6))
 
     # Загрузка весов
     print("Downloading model weights...")

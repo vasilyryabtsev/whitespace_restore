@@ -58,6 +58,7 @@ def load_checkpoint(filepath, model, optimizer=None, scheduler=None, device="cpu
     """Загружает чекпоинт модели и восстанавливает состояние."""
     checkpoint = torch.load(filepath, map_location=device)
 
+    print("Loading state dict...")
     model.load_state_dict(checkpoint["model_state_dict"])
 
     if optimizer is not None and "optimizer_state_dict" in checkpoint:

@@ -33,9 +33,6 @@ PATH_TO_DATA=/path/to/your/data.csv
 # Путь для сохранения результатов
 PATH_TO_SAVE=/path/to/save/results.csv
 
-# Название колонки с текстами без пробелов
-TEXT_COLUMN=text_no_spaces
-
 # Устройство для вычислений
 DEVICE=cuda  # или cpu (если нет GPU)
 

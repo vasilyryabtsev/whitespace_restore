@@ -1,8 +1,9 @@
 import os
 import torch
 import pandas as pd
-import logging
 import requests
+import subprocess
+import tempfile
 
 from pathlib import Path
 from torch.utils.data import DataLoader
@@ -163,37 +164,56 @@ def get_special_token_ids(tokenizer):
     return special_ids
 
 
+def clean_txt_file(file_path):
+    """
+    Открывает файл, удаляет первую строчку,
+    из остальных строк удаляет все символы до первой запятой включительно.
+    """
+    # Читаем все строки из файла
+    with open(file_path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+    
+    # Пропускаем первую строку и обрабатываем остальные
+    cleaned_lines = []
+    for line in lines[1:]:
+        # Находим первую запятую и удаляем все до неё включительно
+        comma_index = line.find(',')
+        cleaned_line = line[comma_index + 1:]  # Берём всё после запятой
+        cleaned_lines.append(cleaned_line)
+    
+    temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv', encoding='utf-8')
+
+    # Записываем обработанные строки в новый файл
+    temp_file.writelines(cleaned_lines)
+    temp_file.close()
+    
+    return temp_file.name
+
+
 def inference(
     path_to_data,
     path_to_save,
     path_to_weights,
-    text_col="text_no_spaces",
     device="cpu",
     batch_size=4,
     num_workers=2,
     threshold=0.5,
 ):
     """Выполняет инференс модели на данных и сохраняет результаты."""
-    # Загрузка данных
-    logging.info(f"Loading data from {path_to_data}")
-    df = pd.read_csv(path_to_data, index=False)
-    # Создание файла
-    file_path = "./text.txt"
-    with open(file_path, "w") as f:
-        for text in df[text_col].tolist():
-            f.write(text + "\n")
+    # Очистка данных
+    temp_path = clean_txt_file(path_to_data)
     # Создание датасета
-    dataset = WhitespaceDataset(file_path)
-    logging.info(f"Dataset created with {len(dataset)} samples")
+    dataset = WhitespaceDataset(temp_path)
+    print(f"Dataset created with {len(dataset)} samples")
     # Загрузка модели
-    logging.info("Initializing model...")
+    print("Initializing model...")
     model = ByT5WhitespaceRestorer()
-    logging.info(f"Loading model weights from {path_to_weights}...")
-    load_checkpoint("./best_model.pth", model, device=device)
+    print(f"Loading model weights from {path_to_weights}...")
+    load_checkpoint(path_to_weights, model, device=device)
     model.to(device)
     model.eval()
     # Получение предсказаний
-    logging.info("Starting inference...")
+    print("Starting inference...")
     preds = restore_whitespace_batch(
         dataset=dataset,
         model=model,
@@ -203,23 +223,41 @@ def inference(
         threshold=threshold,
     )
     # Сохранение результатов
-    logging.info(f"Saving results to {path_to_save}")
+    print(f"Saving results to {path_to_save}")
     res = pd.DataFrame({"id": preds.index, "predicted_positions": preds.space_indices})
     res.to_csv(path_to_save, index=False)
     # Удаление временного файла
-    os.remove(file_path)
+    os.remove(temp_path)
 
 
-def download_weights(url, path="./best_model.pth"):
-    """Загружает веса модели по URL."""
-    if Path(path).exists():
-        return path
+def download_and_extract_file(filename, download_url):
+    """
+    Проверяет наличие файла в текущей директории. Если файл не найден,
+    скачивает архив с Google Drive, извлекает его и возвращает путь к файлу.
+    """
+    current_dir = os.getcwd()
+    
+    # Проверяем есть ли файл в текущей директории
+    file_path = os.path.join(current_dir, filename)
+    if os.path.exists(file_path):
+        return file_path
+    
+    zip_filename = "weights.zip"
 
-    print(f"⬇️ Downloading {url}")
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        with open(path, "wb") as f:
-            for chunk in r.iter_content(8192):
-                f.write(chunk)
-    print(f"✅ Saved to {path}")
-    return path
+    # Скачиваем файл с помощью wget
+    subprocess.run([
+        "wget", 
+        "--no-check-certificate", 
+        download_url, 
+        "-O", 
+        zip_filename
+    ], check=True)
+    
+    # Извлекаем архив
+    subprocess.run(["unzip", zip_filename], check=True)
+    
+    # Удаляем архив
+    os.remove(zip_filename)
+    
+    # Возвращаем путь к файлу
+    return os.path.join(current_dir, filename)

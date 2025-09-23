@@ -53,7 +53,7 @@ id,text_no_spaces
 
 ### 5. Запуск инференса
 ```bash
-python run_inference.py
+python3 run_inference.py
 ```
 
 ### Результат
